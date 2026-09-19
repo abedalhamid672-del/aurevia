@@ -13,7 +13,7 @@ export default function Hero({ onSearch, onMenu, bagCount }: HeroProps) {
   return (
     <section className="hero-scroll" aria-label="Aurevia cinematic introduction">
       <div className="hero-sticky">
-        <video ref={videoRef} className="hero-media" src={VIDEO_SRC} muted playsInline preload="auto" aria-hidden="true" />
+        <video ref={videoRef} className="hero-media hero-video-layer" src={VIDEO_SRC} muted playsInline preload="auto" disablePictureInPicture disableRemotePlayback controlsList="nodownload noplaybackrate" tabIndex={-1} aria-hidden="true" />
         <canvas ref={canvasRef} className={`hero-canvas ${canvasLive ? "live" : ""}`} aria-hidden="true" />
         <div className="hero-shade" />
         <Navbar onSearch={onSearch} onMenu={onMenu} bagCount={bagCount} />
