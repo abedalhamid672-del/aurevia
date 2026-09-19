@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 const TARGET_TAU = 13;
 const MAX_PLAYBACK_RATE = 3.8;
+const MAX_REVERSE_PLAYBACK_RATE = 1.65;
 const CLOSE_ENOUGH = 0.06;
 const REVERSE_SEEK_INTERVAL = 72;
 const PROGRESS_STEP = 0.0015;
@@ -137,6 +138,11 @@ export function useVideoScrub(videoSrc: string, reverseVideoSrc: string) {
         setProgress(rawProgress);
       }
 
+      if (!forwardReady) {
+        raf = requestAnimationFrame(tick);
+        return;
+      }
+
       if (reducedMotion) {
         pauseAll();
         if (Math.abs(video.currentTime - rawTarget) > CLOSE_ENOUGH) video.currentTime = rawTarget;
@@ -145,7 +151,7 @@ export function useVideoScrub(videoSrc: string, reverseVideoSrc: string) {
           if (!syncingDirection) {
             const reverseTarget = duration - smoothedTarget;
             const difference = reverseTarget - reverseVideo.currentTime;
-            if (difference > CLOSE_ENOUGH) startPlayback(reverseVideo, Math.min(MAX_PLAYBACK_RATE, Math.max(0.8, 0.85 + difference * 1.15)));
+            if (difference > CLOSE_ENOUGH) startPlayback(reverseVideo, Math.min(MAX_REVERSE_PLAYBACK_RATE, Math.max(0.62, 0.62 + difference * 0.72)));
             else pauseSource(reverseVideo);
           }
         } else {
@@ -171,13 +177,14 @@ export function useVideoScrub(videoSrc: string, reverseVideoSrc: string) {
       resize();
       pauseAll();
       video.currentTime = 0;
+      if (reverseReady) reverseVideo.currentTime = duration;
       paint();
       scheduleFramePaint();
     };
 
     const onReverseLoaded = () => {
       reverseDuration = Number.isFinite(reverseVideo.duration) && reverseVideo.duration > 0 ? reverseVideo.duration : 0;
-      reverseReady = reverseDuration > 0 && (!forwardReady || Math.abs(reverseDuration - duration) <= 0.25);
+      reverseReady = forwardReady && reverseDuration > 0 && Math.abs(reverseDuration - duration) <= 0.25;
       reverseVideo.pause();
       reverseVideo.playbackRate = 1;
       if (reverseReady) reverseVideo.currentTime = duration;
