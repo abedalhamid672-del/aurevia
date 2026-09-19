@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 const TARGET_TAU = 13;
 const MAX_PLAYBACK_RATE = 3.8;
 const CLOSE_ENOUGH = 0.06;
+const SOFT_SETTLE_ZONE = 0.025;
 const REVERSE_SEEK_INTERVAL = 72;
 const PROGRESS_STEP = 0.0015;
 
@@ -39,6 +40,7 @@ export function useVideoScrub(videoSrc: string, reverseVideoSrc: string) {
     let reverseDuration = 0;
     let activeDirection: "forward" | "reverse" = "forward";
     let syncingDirection: "forward" | "reverse" | null = null;
+    let motionRate = 1;
 
     const getScrollProgress = () => {
       const hero = video.closest(".hero-scroll");
@@ -86,12 +88,14 @@ export function useVideoScrub(videoSrc: string, reverseVideoSrc: string) {
     };
 
     const startPlayback = (source: HTMLVideoElement, rate: number) => {
-      source.playbackRate = rate;
+      motionRate += (rate - motionRate) * 0.16;
+      source.playbackRate = motionRate;
       if (source.paused) void source.play().then(scheduleFramePaint).catch(() => undefined);
     };
 
     const pauseSource = (source: HTMLVideoElement) => {
       if (!source.paused) source.pause();
+      motionRate = 1;
       source.playbackRate = 1;
     };
 
@@ -151,6 +155,7 @@ export function useVideoScrub(videoSrc: string, reverseVideoSrc: string) {
             const reverseTarget = duration - smoothedTarget;
             const difference = reverseTarget - reverseVideo.currentTime;
             if (difference > CLOSE_ENOUGH) startPlayback(reverseVideo, Math.min(MAX_PLAYBACK_RATE, Math.max(0.8, 0.85 + difference * 1.15)));
+            else if (difference > SOFT_SETTLE_ZONE) startPlayback(reverseVideo, 0.82);
             else pauseSource(reverseVideo);
           }
         } else {
@@ -161,6 +166,7 @@ export function useVideoScrub(videoSrc: string, reverseVideoSrc: string) {
         if (!syncingDirection) {
           const difference = smoothedTarget - video.currentTime;
           if (difference > CLOSE_ENOUGH) startPlayback(video, Math.min(MAX_PLAYBACK_RATE, Math.max(0.8, 0.85 + difference * 1.15)));
+          else if (difference > SOFT_SETTLE_ZONE) startPlayback(video, 0.82);
           else pauseSource(video);
         }
       }
