@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 const TARGET_TAU = 13;
-const MAX_FORWARD_RATE = 3.8;
+const MAX_PLAYBACK_RATE = 3.8;
 const CLOSE_ENOUGH = 0.06;
 const REVERSE_SEEK_INTERVAL = 72;
 const PROGRESS_STEP = 0.0015;
@@ -10,16 +10,18 @@ type VideoWithFrameCallback = HTMLVideoElement & {
   requestVideoFrameCallback?: (callback: () => void) => number;
 };
 
-export function useVideoScrub(videoSrc: string) {
+export function useVideoScrub(videoSrc: string, reverseVideoSrc: string) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const reverseVideoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [progress, setProgress] = useState(0);
   const [canvasLive, setCanvasLive] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current as VideoWithFrameCallback | null;
+    const reverseVideo = reverseVideoRef.current as VideoWithFrameCallback | null;
     const canvas = canvasRef.current;
-    if (!video || !canvas) return;
+    if (!video || !reverseVideo || !canvas) return;
     const context = canvas.getContext("2d", { alpha: false });
     if (!context) return;
 
@@ -32,8 +34,11 @@ export function useVideoScrub(videoSrc: string) {
     let duration = 1;
     let smoothedTarget = 0;
     let lastReverseSeek = 0;
-    let previousProgress = 0;
-    let reversePlaybackSupported: boolean | null = null;
+    let reverseReady = false;
+    let forwardReady = false;
+    let reverseDuration = 0;
+    let activeDirection: "forward" | "reverse" = "forward";
+    let syncingDirection: "forward" | "reverse" | null = null;
 
     const getScrollProgress = () => {
       const hero = video.closest(".hero-scroll");
@@ -41,6 +46,8 @@ export function useVideoScrub(videoSrc: string) {
       const max = Math.max(1, hero.clientHeight - window.innerHeight);
       return Math.min(1, Math.max(0, window.scrollY / max));
     };
+
+    const activeSource = () => activeDirection === "reverse" ? reverseVideo : video;
 
     const resize = () => {
       const ratio = Math.min(window.devicePixelRatio || 1, 2);
@@ -52,68 +59,68 @@ export function useVideoScrub(videoSrc: string) {
     };
 
     const paint = () => {
-      if (video.readyState < 2 || video.videoWidth === 0) return;
-      const scale = Math.max(window.innerWidth / video.videoWidth, window.innerHeight / video.videoHeight);
-      const width = video.videoWidth * scale;
-      const height = video.videoHeight * scale;
-      context.drawImage(video, (window.innerWidth - width) / 2, (window.innerHeight - height) / 2, width, height);
-      if (!framePainted) {
+      const source = activeSource();
+      if (source.readyState < 2 || source.videoWidth === 0) return;
+      const scale = Math.max(window.innerWidth / source.videoWidth, window.innerHeight / source.videoHeight);
+      const width = source.videoWidth * scale;
+      const height = source.videoHeight * scale;
+      context.drawImage(source, (window.innerWidth - width) / 2, (window.innerHeight - height) / 2, width, height);
+      if (!framePainted && source.currentTime > 0.02) {
         framePainted = true;
         setCanvasLive(true);
       }
     };
 
     const scheduleFramePaint = () => {
-      if (!active || video.readyState < 2) return;
-      if (video.requestVideoFrameCallback) {
-        video.requestVideoFrameCallback(() => {
+      const source = activeSource();
+      if (!active || source.readyState < 2) return;
+      if (source.requestVideoFrameCallback) {
+        source.requestVideoFrameCallback(() => {
           if (!active) return;
           paint();
-          if (!video.paused) scheduleFramePaint();
+          if (!source.paused) scheduleFramePaint();
         });
-      } else if (!video.paused) {
+      } else if (!source.paused) {
         paint();
       }
     };
 
-    const startPlayback = (rate: number) => {
-      video.playbackRate = rate;
-      if (video.paused) void video.play().then(scheduleFramePaint).catch(() => undefined);
+    const startPlayback = (source: HTMLVideoElement, rate: number) => {
+      source.playbackRate = rate;
+      if (source.paused) void source.play().then(scheduleFramePaint).catch(() => undefined);
     };
 
-    const pausePlayback = () => {
-      if (!video.paused) video.pause();
-      video.playbackRate = 1;
+    const pauseSource = (source: HTMLVideoElement) => {
+      if (!source.paused) source.pause();
+      source.playbackRate = 1;
     };
 
-    const startReversePlayback = (difference: number) => {
-      if (reversePlaybackSupported === false) return false;
-      try {
-        const rate = -Math.min(1.8, Math.max(0.55, Math.abs(difference) * 1.4));
-        video.playbackRate = rate;
-        reversePlaybackSupported = video.playbackRate < 0;
-        if (!reversePlaybackSupported) {
-          video.playbackRate = 1;
-          return false;
-        }
-        if (video.paused) {
-          void video.play().catch(() => {
-            reversePlaybackSupported = false;
-            video.playbackRate = 1;
-          });
-        }
-        return true;
-      } catch {
-        reversePlaybackSupported = false;
-        video.playbackRate = 1;
-        return false;
-      }
+    const pauseAll = () => {
+      pauseSource(video);
+      pauseSource(reverseVideo);
     };
 
-    const correctReverse = (targetTime: number, now: number) => {
+    const switchToReverse = () => {
+      if (!reverseReady || activeDirection === "reverse") return reverseReady;
+      pauseAll();
+      syncingDirection = "reverse";
+      reverseVideo.currentTime = Math.max(0, Math.min(duration, duration - video.currentTime));
+      activeDirection = "reverse";
+      return true;
+    };
+
+    const switchToForward = () => {
+      if (activeDirection === "forward") return;
+      pauseAll();
+      syncingDirection = "forward";
+      video.currentTime = Math.max(0, Math.min(duration, duration - reverseVideo.currentTime));
+      activeDirection = "forward";
+    };
+
+    const correctReverseFallback = (targetTime: number, now: number) => {
       if (now - lastReverseSeek < REVERSE_SEEK_INTERVAL) return;
       lastReverseSeek = now;
-      video.pause();
+      pauseAll();
       video.currentTime = Math.max(0, Math.min(duration, targetTime));
       paint();
     };
@@ -123,8 +130,6 @@ export function useVideoScrub(videoSrc: string) {
       last = now;
       const rawProgress = getScrollProgress();
       const rawTarget = rawProgress * duration;
-      const direction = rawProgress - previousProgress;
-      previousProgress = rawProgress;
       smoothedTarget += (rawTarget - smoothedTarget) * (1 - Math.exp(-dt * TARGET_TAU));
 
       if (Math.abs(rawProgress - lastPublishedProgress) > PROGRESS_STEP || rawProgress === 0 || rawProgress === 1) {
@@ -133,46 +138,63 @@ export function useVideoScrub(videoSrc: string) {
       }
 
       if (reducedMotion) {
-        pausePlayback();
+        pauseAll();
         if (Math.abs(video.currentTime - rawTarget) > CLOSE_ENOUGH) video.currentTime = rawTarget;
-      } else {
-        const difference = smoothedTarget - video.currentTime;
-        if (difference > CLOSE_ENOUGH) {
-          // Keep forward motion continuous. The video catches up by playback speed, never by repeated seeks.
-          const rate = Math.min(MAX_FORWARD_RATE, Math.max(0.8, 0.85 + difference * 1.15));
-          startPlayback(rate);
-        } else if (difference < -CLOSE_ENOUGH) {
-          // Prefer native reverse playback; only use sparse seeks when the browser rejects negative rates.
-          if (!startReversePlayback(difference)) correctReverse(smoothedTarget, now);
+      } else if (rawProgress < (smoothedTarget / duration) - 0.0002) {
+        if (reverseReady && switchToReverse()) {
+          if (!syncingDirection) {
+            const reverseTarget = duration - smoothedTarget;
+            const difference = reverseTarget - reverseVideo.currentTime;
+            if (difference > CLOSE_ENOUGH) startPlayback(reverseVideo, Math.min(MAX_PLAYBACK_RATE, Math.max(0.8, 0.85 + difference * 1.15)));
+            else pauseSource(reverseVideo);
+          }
         } else {
-          pausePlayback();
+          correctReverseFallback(smoothedTarget, now);
+        }
+      } else {
+        if (activeDirection === "reverse") switchToForward();
+        if (!syncingDirection) {
+          const difference = smoothedTarget - video.currentTime;
+          if (difference > CLOSE_ENOUGH) startPlayback(video, Math.min(MAX_PLAYBACK_RATE, Math.max(0.8, 0.85 + difference * 1.15)));
+          else pauseSource(video);
         }
       }
-
-      if (direction > 0.0002 && video.playbackRate < 0) pausePlayback();
 
       raf = requestAnimationFrame(tick);
     };
 
-    const onLoaded = () => {
+    const onForwardLoaded = () => {
       duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 1;
+      forwardReady = true;
+      if (reverseDuration > 0) reverseReady = Math.abs(reverseDuration - duration) <= 0.25;
       smoothedTarget = 0;
       resize();
-      video.pause();
-      video.playbackRate = 1;
+      pauseAll();
       video.currentTime = 0;
       paint();
       scheduleFramePaint();
     };
 
-    const onSeeked = () => {
-      paint();
-      if (!video.paused) scheduleFramePaint();
+    const onReverseLoaded = () => {
+      reverseDuration = Number.isFinite(reverseVideo.duration) && reverseVideo.duration > 0 ? reverseVideo.duration : 0;
+      reverseReady = reverseDuration > 0 && (!forwardReady || Math.abs(reverseDuration - duration) <= 0.25);
+      reverseVideo.pause();
+      reverseVideo.playbackRate = 1;
+      if (reverseReady) reverseVideo.currentTime = duration;
     };
 
-    video.addEventListener("loadedmetadata", onLoaded);
+    const onSeeked = () => {
+      syncingDirection = null;
+      paint();
+      if (!activeSource().paused) scheduleFramePaint();
+    };
+
+    video.addEventListener("loadedmetadata", onForwardLoaded);
     video.addEventListener("loadeddata", scheduleFramePaint);
     video.addEventListener("seeked", onSeeked);
+    reverseVideo.addEventListener("loadedmetadata", onReverseLoaded);
+    reverseVideo.addEventListener("loadeddata", scheduleFramePaint);
+    reverseVideo.addEventListener("seeked", onSeeked);
     window.addEventListener("resize", resize);
     window.addEventListener("orientationchange", resize);
     resize();
@@ -181,15 +203,17 @@ export function useVideoScrub(videoSrc: string) {
     return () => {
       active = false;
       cancelAnimationFrame(raf);
-      video.pause();
-      video.playbackRate = 1;
-      video.removeEventListener("loadedmetadata", onLoaded);
+      pauseAll();
+      video.removeEventListener("loadedmetadata", onForwardLoaded);
       video.removeEventListener("loadeddata", scheduleFramePaint);
       video.removeEventListener("seeked", onSeeked);
+      reverseVideo.removeEventListener("loadedmetadata", onReverseLoaded);
+      reverseVideo.removeEventListener("loadeddata", scheduleFramePaint);
+      reverseVideo.removeEventListener("seeked", onSeeked);
       window.removeEventListener("resize", resize);
       window.removeEventListener("orientationchange", resize);
     };
-  }, [videoSrc]);
+  }, [videoSrc, reverseVideoSrc]);
 
-  return { videoRef, canvasRef, progress, canvasLive };
+  return { videoRef, reverseVideoRef, canvasRef, progress, canvasLive };
 }
