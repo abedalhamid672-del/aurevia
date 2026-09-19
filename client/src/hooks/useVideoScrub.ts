@@ -32,6 +32,8 @@ export function useVideoScrub(videoSrc: string) {
     let duration = 1;
     let smoothedTarget = 0;
     let lastReverseSeek = 0;
+    let previousProgress = 0;
+    let reversePlaybackSupported: boolean | null = null;
 
     const getScrollProgress = () => {
       const hero = video.closest(".hero-scroll");
@@ -84,6 +86,30 @@ export function useVideoScrub(videoSrc: string) {
       video.playbackRate = 1;
     };
 
+    const startReversePlayback = (difference: number) => {
+      if (reversePlaybackSupported === false) return false;
+      try {
+        const rate = -Math.min(1.8, Math.max(0.55, Math.abs(difference) * 1.4));
+        video.playbackRate = rate;
+        reversePlaybackSupported = video.playbackRate < 0;
+        if (!reversePlaybackSupported) {
+          video.playbackRate = 1;
+          return false;
+        }
+        if (video.paused) {
+          void video.play().catch(() => {
+            reversePlaybackSupported = false;
+            video.playbackRate = 1;
+          });
+        }
+        return true;
+      } catch {
+        reversePlaybackSupported = false;
+        video.playbackRate = 1;
+        return false;
+      }
+    };
+
     const correctReverse = (targetTime: number, now: number) => {
       if (now - lastReverseSeek < REVERSE_SEEK_INTERVAL) return;
       lastReverseSeek = now;
@@ -97,6 +123,8 @@ export function useVideoScrub(videoSrc: string) {
       last = now;
       const rawProgress = getScrollProgress();
       const rawTarget = rawProgress * duration;
+      const direction = rawProgress - previousProgress;
+      previousProgress = rawProgress;
       smoothedTarget += (rawTarget - smoothedTarget) * (1 - Math.exp(-dt * TARGET_TAU));
 
       if (Math.abs(rawProgress - lastPublishedProgress) > PROGRESS_STEP || rawProgress === 0 || rawProgress === 1) {
@@ -114,12 +142,14 @@ export function useVideoScrub(videoSrc: string) {
           const rate = Math.min(MAX_FORWARD_RATE, Math.max(0.8, 0.85 + difference * 1.15));
           startPlayback(rate);
         } else if (difference < -CLOSE_ENOUGH) {
-          // Browsers do not reliably support negative playbackRate; correct backward movement gently and sparsely.
-          correctReverse(smoothedTarget, now);
+          // Prefer native reverse playback; only use sparse seeks when the browser rejects negative rates.
+          if (!startReversePlayback(difference)) correctReverse(smoothedTarget, now);
         } else {
           pausePlayback();
         }
       }
+
+      if (direction > 0.0002 && video.playbackRate < 0) pausePlayback();
 
       raf = requestAnimationFrame(tick);
     };
