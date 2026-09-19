@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 
-const TARGET_TAU = 18;
-const CATCH_UP_WINDOW = 1.35;
-const SETTLE_EPSILON = 0.035;
+const TARGET_TAU = 13;
+const MAX_FORWARD_RATE = 3.8;
+const CLOSE_ENOUGH = 0.06;
+const REVERSE_SEEK_INTERVAL = 72;
 const PROGRESS_STEP = 0.0015;
 
 type VideoWithFrameCallback = HTMLVideoElement & {
@@ -14,8 +15,6 @@ export function useVideoScrub(videoSrc: string) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [progress, setProgress] = useState(0);
   const [canvasLive, setCanvasLive] = useState(false);
-  const durationRef = useRef(1);
-  const targetTimeRef = useRef(0);
 
   useEffect(() => {
     const video = videoRef.current as VideoWithFrameCallback | null;
@@ -28,10 +27,11 @@ export function useVideoScrub(videoSrc: string) {
     let raf = 0;
     let last = performance.now();
     let active = true;
-    let seeking = false;
     let framePainted = false;
     let lastPublishedProgress = -1;
+    let duration = 1;
     let smoothedTarget = 0;
+    let lastReverseSeek = 0;
 
     const getScrollProgress = () => {
       const hero = video.closest(".hero-scroll");
@@ -54,9 +54,7 @@ export function useVideoScrub(videoSrc: string) {
       const scale = Math.max(window.innerWidth / video.videoWidth, window.innerHeight / video.videoHeight);
       const width = video.videoWidth * scale;
       const height = video.videoHeight * scale;
-      const x = (window.innerWidth - width) / 2;
-      const y = (window.innerHeight - height) / 2;
-      context.drawImage(video, x, y, width, height);
+      context.drawImage(video, (window.innerWidth - width) / 2, (window.innerHeight - height) / 2, width, height);
       if (!framePainted) {
         framePainted = true;
         setCanvasLive(true);
@@ -69,31 +67,37 @@ export function useVideoScrub(videoSrc: string) {
         video.requestVideoFrameCallback(() => {
           if (!active) return;
           paint();
-          scheduleFramePaint();
+          if (!video.paused) scheduleFramePaint();
         });
       } else if (!video.paused) {
         paint();
       }
     };
 
-    const seekTo = (time: number) => {
-      const clamped = Math.min(durationRef.current, Math.max(0, time));
-      if (Math.abs(video.currentTime - clamped) < SETTLE_EPSILON || seeking) return;
-      seeking = true;
-      video.pause();
-      video.currentTime = clamped;
+    const startPlayback = (rate: number) => {
+      video.playbackRate = rate;
+      if (video.paused) void video.play().then(scheduleFramePaint).catch(() => undefined);
     };
 
-    const stopAtTarget = () => {
-      video.pause();
+    const pausePlayback = () => {
+      if (!video.paused) video.pause();
       video.playbackRate = 1;
     };
 
-    const chaseTarget = (dt: number) => {
+    const correctReverse = (targetTime: number, now: number) => {
+      if (now - lastReverseSeek < REVERSE_SEEK_INTERVAL) return;
+      lastReverseSeek = now;
+      video.pause();
+      video.currentTime = Math.max(0, Math.min(duration, targetTime));
+      paint();
+    };
+
+    const tick = (now: number) => {
+      const dt = Math.min(0.08, (now - last) / 1000);
+      last = now;
       const rawProgress = getScrollProgress();
-      const rawTarget = rawProgress * durationRef.current;
+      const rawTarget = rawProgress * duration;
       smoothedTarget += (rawTarget - smoothedTarget) * (1 - Math.exp(-dt * TARGET_TAU));
-      targetTimeRef.current = smoothedTarget;
 
       if (Math.abs(rawProgress - lastPublishedProgress) > PROGRESS_STEP || rawProgress === 0 || rawProgress === 1) {
         lastPublishedProgress = rawProgress;
@@ -101,40 +105,28 @@ export function useVideoScrub(videoSrc: string) {
       }
 
       if (reducedMotion) {
-        stopAtTarget();
-        seekTo(rawTarget);
-        return;
-      }
-
-      const difference = targetTimeRef.current - video.currentTime;
-      if (seeking) return;
-
-      if (difference > SETTLE_EPSILON && difference < CATCH_UP_WINDOW) {
-        video.playbackRate = Math.min(2.6, Math.max(0.55, 0.65 + difference * 2.6));
-        if (video.paused) void video.play().catch(() => undefined);
-      } else if (difference < -SETTLE_EPSILON) {
-        stopAtTarget();
-        seekTo(targetTimeRef.current);
-      } else if (difference >= -SETTLE_EPSILON && difference <= SETTLE_EPSILON) {
-        stopAtTarget();
+        pausePlayback();
+        if (Math.abs(video.currentTime - rawTarget) > CLOSE_ENOUGH) video.currentTime = rawTarget;
       } else {
-        stopAtTarget();
-        seekTo(targetTimeRef.current);
+        const difference = smoothedTarget - video.currentTime;
+        if (difference > CLOSE_ENOUGH) {
+          // Keep forward motion continuous. The video catches up by playback speed, never by repeated seeks.
+          const rate = Math.min(MAX_FORWARD_RATE, Math.max(0.8, 0.85 + difference * 1.15));
+          startPlayback(rate);
+        } else if (difference < -CLOSE_ENOUGH) {
+          // Browsers do not reliably support negative playbackRate; correct backward movement gently and sparsely.
+          correctReverse(smoothedTarget, now);
+        } else {
+          pausePlayback();
+        }
       }
-    };
 
-    const tick = (now: number) => {
-      const dt = Math.min(0.08, (now - last) / 1000);
-      last = now;
-      chaseTarget(dt);
-      if (!video.requestVideoFrameCallback && !video.paused) paint();
       raf = requestAnimationFrame(tick);
     };
 
     const onLoaded = () => {
-      durationRef.current = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 1;
+      duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 1;
       smoothedTarget = 0;
-      targetTimeRef.current = 0;
       resize();
       video.pause();
       video.playbackRate = 1;
@@ -144,9 +136,8 @@ export function useVideoScrub(videoSrc: string) {
     };
 
     const onSeeked = () => {
-      seeking = false;
       paint();
-      scheduleFramePaint();
+      if (!video.paused) scheduleFramePaint();
     };
 
     video.addEventListener("loadedmetadata", onLoaded);
@@ -161,6 +152,7 @@ export function useVideoScrub(videoSrc: string) {
       active = false;
       cancelAnimationFrame(raf);
       video.pause();
+      video.playbackRate = 1;
       video.removeEventListener("loadedmetadata", onLoaded);
       video.removeEventListener("loadeddata", scheduleFramePaint);
       video.removeEventListener("seeked", onSeeked);
