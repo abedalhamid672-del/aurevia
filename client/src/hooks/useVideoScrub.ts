@@ -31,6 +31,8 @@ export function useVideoScrub(videoSrc: string) {
     let lastPublishedProgress = -1;
     let seeking = false;
     let pendingTime = 0;
+    let previousProgress = 0;
+    let scrollVelocity = 0;
 
     const getScrollProgress = () => {
       const hero = video.closest(".hero-scroll");
@@ -82,15 +84,21 @@ export function useVideoScrub(videoSrc: string) {
       const dt = Math.min(0.08, (now - last) / 1000);
       last = now;
       const nextProgress = getScrollProgress();
+      const instantaneousVelocity = Math.abs(nextProgress - previousProgress) / Math.max(dt, 0.001);
+      scrollVelocity += (instantaneousVelocity - scrollVelocity) * Math.min(1, dt * 8);
+      previousProgress = nextProgress;
       if (Math.abs(nextProgress - lastPublishedProgress) > PROGRESS_STEP || nextProgress === 0 || nextProgress === 1) {
         lastPublishedProgress = nextProgress;
         setProgress(nextProgress);
       }
       targetRef.current = nextProgress * durationRef.current;
       if (reducedMotion) currentRef.current = targetRef.current;
-      else currentRef.current += (targetRef.current - currentRef.current) * (1 - Math.exp(-dt * LERP_TAU));
+      else {
+        const adaptiveTau = Math.min(18, LERP_TAU + scrollVelocity * 0.75);
+        currentRef.current += (targetRef.current - currentRef.current) * (1 - Math.exp(-dt * adaptiveTau));
+      }
       if (Math.abs(targetRef.current - currentRef.current) < SEEK_THRESHOLD) currentRef.current = targetRef.current;
-      queueSeek(currentRef.current);
+      if (video.readyState >= 2) queueSeek(currentRef.current);
       raf = requestAnimationFrame(tick);
     };
 
