@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 
 const TARGET_TAU = 13;
 const MAX_PLAYBACK_RATE = 3.8;
-const MAX_REVERSE_PLAYBACK_RATE = 3.1;
 const CLOSE_ENOUGH = 0.06;
 const REVERSE_SEEK_INTERVAL = 72;
 const PROGRESS_STEP = 0.0015;
@@ -151,7 +150,7 @@ export function useVideoScrub(videoSrc: string, reverseVideoSrc: string) {
           if (!syncingDirection) {
             const reverseTarget = duration - smoothedTarget;
             const difference = reverseTarget - reverseVideo.currentTime;
-            if (difference > CLOSE_ENOUGH) startPlayback(reverseVideo, Math.min(MAX_REVERSE_PLAYBACK_RATE, Math.max(0.72, 0.72 + difference * 1.35)));
+            if (difference > CLOSE_ENOUGH) startPlayback(reverseVideo, Math.min(MAX_PLAYBACK_RATE, Math.max(0.8, 0.85 + difference * 1.15)));
             else pauseSource(reverseVideo);
           }
         } else {
