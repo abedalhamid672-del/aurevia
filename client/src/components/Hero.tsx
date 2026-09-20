@@ -4,11 +4,12 @@ import Navbar from "@/components/Navbar";
 
 const VIDEO_SRC = "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260821_114821_a8ca298f-be2c-4613-a4dd-51b69e16bbde.mp4";
 const VIDEO_WEBM_SRC = "/manus-storage/aurevia-hero-forward-1080-seek_7c9711cf.webm";
+const VIDEO_REVERSE_WEBM_SRC = "/manus-storage/aurevia-hero-reverse-1080-seek_52c3aa57.webm";
 
 interface HeroProps { onSearch: () => void; onMenu: () => void; bagCount: number; }
 
 export default function Hero({ onSearch, onMenu, bagCount }: HeroProps) {
-  const { videoRef, canvasRef, progress, canvasLive } = useVideoScrub(VIDEO_SRC);
+  const { videoRef, reverseVideoRef, canvasRef, progress, canvasLive } = useVideoScrub(VIDEO_SRC, VIDEO_REVERSE_WEBM_SRC);
   const scrollToCollection = () => document.getElementById("collection")?.scrollIntoView({ behavior: "smooth" });
 
   return (
@@ -17,6 +18,9 @@ export default function Hero({ onSearch, onMenu, bagCount }: HeroProps) {
         <video ref={videoRef} className="hero-media" muted playsInline preload="auto" aria-hidden="true">
           <source src={VIDEO_WEBM_SRC} type="video/webm" />
           <source src={VIDEO_SRC} type="video/mp4" />
+        </video>
+        <video ref={reverseVideoRef} className="hero-reverse-media" muted playsInline preload="auto" aria-hidden="true">
+          <source src={VIDEO_REVERSE_WEBM_SRC} type="video/webm" />
         </video>
         <canvas ref={canvasRef} className={`hero-canvas ${canvasLive ? "live" : ""}`} aria-hidden="true" />
         <div className="hero-shade" />
