@@ -23,6 +23,7 @@ export function useVideoScrub(videoSrc: string) {
     let raf = 0;
     let last = performance.now();
     let framePainted = false;
+    let lastPublishedProgress = -1;
 
     const getScrollProgress = () => {
       const hero = video.closest(".hero-scroll");
@@ -56,12 +57,15 @@ export function useVideoScrub(videoSrc: string) {
       const dt = Math.min(0.1, (now - last) / 1000);
       last = now;
       const nextProgress = getScrollProgress();
-      setProgress(nextProgress);
+      if (Math.abs(nextProgress - lastPublishedProgress) > 0.002 || nextProgress === 0 || nextProgress === 1) {
+        lastPublishedProgress = nextProgress;
+        setProgress(nextProgress);
+      }
       targetRef.current = nextProgress * durationRef.current;
       if (reducedMotion) currentRef.current = targetRef.current;
       else currentRef.current += (targetRef.current - currentRef.current) * (1 - Math.exp(-dt * LERP_TAU));
       if (Math.abs(targetRef.current - currentRef.current) < SNAP) currentRef.current = targetRef.current;
-      if (Math.abs(video.currentTime - currentRef.current) > 0.02) video.currentTime = currentRef.current;
+      if (Math.abs(video.currentTime - currentRef.current) > 0.012) video.currentTime = currentRef.current;
       paint();
       raf = requestAnimationFrame(tick);
     };
