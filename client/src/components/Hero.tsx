@@ -3,7 +3,7 @@ import { useVideoScrub } from "@/hooks/useVideoScrub";
 import Navbar from "@/components/Navbar";
 
 const VIDEO_SRC = "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260821_114821_a8ca298f-be2c-4613-a4dd-51b69e16bbde.mp4";
-const VIDEO_WEBM_SRC = "/manus-storage/aurevia-hero-forward-1080_b7a4a077.webm";
+const VIDEO_WEBM_SRC = "/manus-storage/aurevia-hero-forward-1080-seek_7c9711cf.webm";
 
 interface HeroProps { onSearch: () => void; onMenu: () => void; bagCount: number; }
 
