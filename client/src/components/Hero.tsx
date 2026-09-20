@@ -3,6 +3,7 @@ import { useVideoScrub } from "@/hooks/useVideoScrub";
 import Navbar from "@/components/Navbar";
 
 const VIDEO_SRC = "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260821_114821_a8ca298f-be2c-4613-a4dd-51b69e16bbde.mp4";
+const VIDEO_WEBM_SRC = "/manus-storage/aurevia-hero-forward_c65a2b58.webm";
 
 interface HeroProps { onSearch: () => void; onMenu: () => void; bagCount: number; }
 
@@ -13,7 +14,10 @@ export default function Hero({ onSearch, onMenu, bagCount }: HeroProps) {
   return (
     <section className="hero-scroll" aria-label="Aurevia cinematic introduction">
       <div className="hero-sticky">
-        <video ref={videoRef} className="hero-media" src={VIDEO_SRC} muted playsInline preload="auto" aria-hidden="true" />
+        <video ref={videoRef} className="hero-media" muted playsInline preload="auto" aria-hidden="true">
+          <source src={VIDEO_WEBM_SRC} type="video/webm" />
+          <source src={VIDEO_SRC} type="video/mp4" />
+        </video>
         <canvas ref={canvasRef} className={`hero-canvas ${canvasLive ? "live" : ""}`} aria-hidden="true" />
         <div className="hero-shade" />
         <Navbar onSearch={onSearch} onMenu={onMenu} bagCount={bagCount} />
