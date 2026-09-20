@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 
-const LERP_TAU = 12;
+const LERP_TAU = 9;
 const SNAP = 0.0015;
-const SEEK_THRESHOLD = 0.018;
-const MIN_SEEK_INTERVAL = 32;
+const SEEK_THRESHOLD = 0.026;
+const MIN_SEEK_INTERVAL = 40;
 const PROGRESS_STEP = 0.002;
 
 export function useVideoScrub(videoSrc: string) {
@@ -60,6 +60,14 @@ export function useVideoScrub(videoSrc: string) {
       }
     };
 
+    const paintDecodedFrame = () => {
+      const frameVideo = video as HTMLVideoElement & {
+        requestVideoFrameCallback?: (callback: () => void) => number;
+      };
+      if (frameVideo.requestVideoFrameCallback) frameVideo.requestVideoFrameCallback(() => paint());
+      else paint();
+    };
+
     const requestLatestSeek = (time: number, now: number) => {
       const clamped = Math.min(durationRef.current, Math.max(0, time));
       if (seeking || now - lastSeekAt < MIN_SEEK_INTERVAL) {
@@ -75,7 +83,7 @@ export function useVideoScrub(videoSrc: string) {
 
     const onSeeked = () => {
       seeking = false;
-      paint();
+      paintDecodedFrame();
       if (queuedSeek !== null) {
         const next = queuedSeek;
         queuedSeek = null;
