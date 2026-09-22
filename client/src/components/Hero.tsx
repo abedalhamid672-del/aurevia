@@ -6,9 +6,9 @@ const VIDEO_SRC = "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIX
 const VIDEO_WEBM_SRC = "/manus-storage/aurevia-hero-forward-1080-seek_7c9711cf.webm";
 const VIDEO_REVERSE_WEBM_SRC = "/manus-storage/aurevia-hero-reverse-1080-seek_52c3aa57.webm";
 
-interface HeroProps { onSearch: () => void; onMenu: () => void; bagCount: number; }
+interface HeroProps { onSearch: () => void; onMenu: () => void; bagCount: number; onAccount?: () => void; onBag?: () => void; }
 
-export default function Hero({ onSearch, onMenu, bagCount }: HeroProps) {
+export default function Hero({ onSearch, onMenu, bagCount, onAccount, onBag }: HeroProps) {
   const { videoRef, reverseVideoRef, canvasRef, progress, canvasLive } = useVideoScrub(VIDEO_SRC, VIDEO_REVERSE_WEBM_SRC);
   const scrollToCollection = () => document.getElementById("collection")?.scrollIntoView({ behavior: "smooth" });
 
@@ -24,7 +24,7 @@ export default function Hero({ onSearch, onMenu, bagCount }: HeroProps) {
         </video>
         <canvas ref={canvasRef} className={`hero-canvas ${canvasLive ? "live" : ""}`} aria-hidden="true" />
         <div className="hero-shade" />
-        <Navbar onSearch={onSearch} onMenu={onMenu} bagCount={bagCount} />
+        <Navbar onSearch={onSearch} onMenu={onMenu} bagCount={bagCount} onAccount={onAccount} onBag={onBag} />
         <div className="hero-content">
           <div className="eyebrow">Curated fragrance collection</div>
           <h1 className="hero-title">The art<br />of scent</h1>
