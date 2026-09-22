@@ -10,6 +10,7 @@ import BrandDirectory from "@/components/BrandDirectory";
 import { fragrances } from "@/data/fragrances";
 import type { Fragrance, FragranceFilters, SortOption } from "@/types/fragrance";
 import { DEVELOPMENT_DATA_NOTICE, SORT_LABELS, sortFragrances, matchesFilters, getAllNotes, getAvailability } from "@/types/fragrance";
+import { usePersistentIds } from "@/lib/persistence";
 
 const defaultFilters: FragranceFilters = { brand: "All", gender: "All", concentration: "All", family: "All", note: "All", accord: "All", availability: "All", year: "All" };
 const finderSteps = ["Mood", "Texture", "Presence"];
@@ -25,9 +26,9 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<FragranceFilters>(defaultFilters);
   const [sort, setSort] = useState<SortOption>("relevance");
-  const [wishlist, setWishlist] = useState<string[]>([]);
+  const [wishlist, setWishlist] = usePersistentIds("aurevia:wishlist:v1");
   const [compare, setCompare] = useState<string[]>([]);
-  const [cart, setCart] = useState<string[]>([]);
+  const [cart, setCart] = usePersistentIds("aurevia:cart:v1");
   const [finderStep, setFinderStep] = useState(0);
   const [finderAnswer, setFinderAnswer] = useState("");
   const brands = useMemo(() => Array.from(new Set(fragrances.map((item) => item.brand))).sort(), []);
@@ -53,7 +54,7 @@ export default function Home() {
   const addToCart = (item: Fragrance) => { setCart((items) => items.includes(item.id) ? items : [...items, item.id]); setCartOpen(true); };
   const openFinder = () => { setFinderStep(0); setFinderAnswer(""); setFinderOpen(true); };
 
-  if (selected) return <FragranceDetail fragrance={selected} onBack={backToCollection} onWishlist={toggleWishlist} />;
+  if (selected) return <FragranceDetail fragrance={selected} onBack={backToCollection} onWishlist={toggleWishlist} isWishlisted={wishlist.includes(selected.id)} />;
 
   return <div className="site-shell">
     <Search open={searchOpen} fragrances={fragrances} onClose={() => setSearchOpen(false)} onOpenProduct={openProduct} />
@@ -64,7 +65,7 @@ export default function Home() {
       <div className="notice-bar" data-reveal><span>{DEVELOPMENT_DATA_NOTICE}</span><span>{wishlist.length} saved · {compare.length} comparing · {cart.length} in bag</span></div>
       <section className="discovery-tools" data-reveal><div><div className="micro">Smart discovery</div><h3>Start with a feeling.</h3><p>Use the finder, then refine the edit by note, family, or presence.</p></div><div className="discovery-actions"><button className="dark-button" type="button" onClick={openFinder}><Sparkles size={15} /> Open fragrance finder</button><button className="outline-button" type="button" onClick={() => setCompareOpen(true)}><GitCompare size={15} /> Compare {compare.length ? `(${compare.length})` : "fragrances"}</button><button className="outline-button" type="button" onClick={() => setCartOpen(true)}><ShoppingBag size={15} /> Bag {cart.length ? `(${cart.length})` : ""}</button></div></section>
       <Filters filters={filters} brands={brands} onChange={setFilters} onReset={resetFilters} />
-      <section className="catalog-body" data-reveal aria-labelledby="catalog-heading"><div className="catalog-toolbar" style={{ padding: "0 0 26px", borderBottom: 0 }}><span id="catalog-heading" className="results-count micro">{results.length} fragrances · real catalog entries</span><label className="drawer-group" style={{ display: "flex", alignItems: "center", gap: 8 }}><span className="filter-label">Sort</span><select className="filter-control" value={sort} onChange={(event) => setSort(event.target.value as SortOption)}>{Object.entries(SORT_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><ChevronDown size={13} strokeWidth={1.1} /></label></div><FragranceGrid fragrances={results} onOpen={openProduct} onWishlist={toggleWishlist} onCompare={toggleCompare} onAddToCart={addToCart} /></section>
+      <section className="catalog-body" data-reveal aria-labelledby="catalog-heading"><div className="catalog-toolbar" style={{ padding: "0 0 26px", borderBottom: 0 }}><span id="catalog-heading" className="results-count micro">{results.length} fragrances · real catalog entries</span><label className="drawer-group" style={{ display: "flex", alignItems: "center", gap: 8 }}><span className="filter-label">Sort</span><select className="filter-control" value={sort} onChange={(event) => setSort(event.target.value as SortOption)}>{Object.entries(SORT_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><ChevronDown size={13} strokeWidth={1.1} /></label></div><FragranceGrid fragrances={results} onOpen={openProduct} onWishlist={toggleWishlist} wishlist={wishlist} onCompare={toggleCompare} onAddToCart={addToCart} /></section>
       {recommendations.length > 0 && <section className="recommendation-strip" data-reveal><div><div className="micro">Aurevia intelligence</div><h3>Because you explored {recommendationTitle}.</h3><p>Similar structure, shared accords, a different signature.</p></div><div className="recommendation-list">{recommendations.map((item) => <button type="button" className="recommendation-item" key={item.id} onClick={() => openProduct(item)}><img src={item.image} alt="" /><span><small>{item.brand}</small><strong>{item.name}</strong></span><ArrowRight size={14} /></button>)}</div></section>}
     </main>
     <section id="discover" className="editorial" data-reveal><div className="editorial-top"><div><div className="section-index micro">02 / Discovery & education</div><h2 className="editorial-title">The world<br />of fragrance</h2></div><p className="editorial-copy">Fragrance is an invisible architecture. A memory, a material, a trace left in the air.</p></div><div className="editorial-grid"><article className="editorial-card"><div className="micro">Notes</div><h3>Composition<br />as language.</h3><p>Learn how top, heart, and base notes reveal themselves over time.</p><button className="text-button" type="button" onClick={() => document.getElementById("education")?.scrollIntoView({ behavior: "smooth" })}>Read the notes <ArrowRight size={14} /></button></article><article className="editorial-card"><div className="micro">Discovery</div><h3>Find<br />your trace.</h3><button className="text-button" type="button" onClick={openFinder}>Open the finder <Sparkles size={14} /></button></article><article className="editorial-card"><div className="micro">Guides</div><h3>Precise<br />selection.</h3><p>Real houses. Clear data. A calmer way to choose what comes next.</p></article></div></section>

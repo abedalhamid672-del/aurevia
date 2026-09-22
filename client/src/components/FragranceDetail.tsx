@@ -5,10 +5,10 @@ import { getAvailability, getDisplayPrice, getDisplayRating, getDisplaySize, get
 import NotePyramid from "@/components/NotePyramid";
 import PriceOffers from "@/components/PriceOffers";
 
-interface FragranceDetailProps { fragrance: Fragrance; onBack: () => void; onWishlist?: (fragrance: Fragrance) => void; }
+interface FragranceDetailProps { fragrance: Fragrance; onBack: () => void; onWishlist?: (fragrance: Fragrance) => void; isWishlisted?: boolean; }
 
-export default function FragranceDetail({ fragrance, onBack, onWishlist }: FragranceDetailProps) {
-  const [saved, setSaved] = useState(false);
+export default function FragranceDetail({ fragrance, onBack, onWishlist, isWishlisted = false }: FragranceDetailProps) {
+  const [saved, setSaved] = useState(isWishlisted);
   const [image, setImage] = useState(fragrance.image);
   const wishlist = () => { setSaved((value) => !value); onWishlist?.(fragrance); };
   return <main className="detail-page">

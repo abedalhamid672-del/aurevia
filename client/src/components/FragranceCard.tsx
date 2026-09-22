@@ -3,10 +3,10 @@ import { useState } from "react";
 import type { Fragrance } from "@/types/fragrance";
 import { getAvailability, getDisplayPrice, getDisplayRating, getDisplaySize } from "@/types/fragrance";
 
-interface FragranceCardProps { fragrance: Fragrance; onOpen: (fragrance: Fragrance) => void; onWishlist?: (fragrance: Fragrance) => void; onCompare?: (fragrance: Fragrance) => void; onAddToCart?: (fragrance: Fragrance) => void; }
+interface FragranceCardProps { fragrance: Fragrance; onOpen: (fragrance: Fragrance) => void; onWishlist?: (fragrance: Fragrance) => void; isWishlisted?: boolean; onCompare?: (fragrance: Fragrance) => void; onAddToCart?: (fragrance: Fragrance) => void; }
 
-export default function FragranceCard({ fragrance, onOpen, onWishlist, onCompare, onAddToCart }: FragranceCardProps) {
-  const [saved, setSaved] = useState(false);
+export default function FragranceCard({ fragrance, onOpen, onWishlist, isWishlisted = false, onCompare, onAddToCart }: FragranceCardProps) {
+  const [saved, setSaved] = useState(isWishlisted);
   const [broken, setBroken] = useState(false);
   const toggleWishlist = (event: React.MouseEvent) => { event.stopPropagation(); setSaved((value) => !value); onWishlist?.(fragrance); };
   return <article className="product-card" onClick={() => onOpen(fragrance)} tabIndex={0} onKeyDown={(event) => { if (event.key === "Enter") onOpen(fragrance); }}>
