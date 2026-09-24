@@ -9,6 +9,9 @@
 - [x] Reflect account-merged wishlist state in cards and product details.
 - [x] Update provider tests for mixed development and official-provider catalog records.
 - [x] Run final typecheck, tests, build, and browser smoke test; save the verified state as a WebDev checkpoint.
+- [x] Make Compare and Bag discovery controls explicit working actions with accessible labels.
+- [x] Add the requested creator credit: ENG. Abdulhamid ALkatib.
+- [x] Validate the controls, footer credit, typecheck, tests, and production build.
 
 ## Data notes
 
