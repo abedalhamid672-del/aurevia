@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Check, ChevronDown, GitCompare, Heart, ShoppingBag, Sparkles, X } from "lucide-react";
 import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
+import { useLocation } from "wouter";
 import Hero from "@/components/Hero";
 import MobileMenu from "@/components/MobileMenu";
 import Search from "@/components/Search";
@@ -18,6 +19,7 @@ const defaultFilters: FragranceFilters = { brand: "All", gender: "All", concentr
 const finderSteps = ["Mood", "Texture", "Presence"];
 
 export default function Home() {
+  const [, setLocation] = useLocation();
   const [selected, setSelected] = useState<Fragrance | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -34,7 +36,7 @@ export default function Home() {
   const addWishlist = trpc.wishlist.add.useMutation();
   const removeWishlist = trpc.wishlist.remove.useMutation();
   const syncedUserRef = useRef<number | null>(null);
-  const [compare, setCompare] = useState<string[]>([]);
+  const [compare, setCompare] = usePersistentIds("aurevia:compare:v1");
   const [cart, setCart] = usePersistentIds("aurevia:cart:v1");
   const [finderStep, setFinderStep] = useState(0);
   const [finderAnswer, setFinderAnswer] = useState("");
@@ -42,6 +44,8 @@ export default function Home() {
   const results = useMemo(() => sortFragrances(fragrances.filter((fragrance) => matchesFilters(fragrance, query, filters)), sort), [query, filters, sort]);
   const compareItems = fragrances.filter((item) => compare.includes(item.id));
   const cartItems = fragrances.filter((item) => cart.includes(item.id));
+  const cartTotal = cartItems.reduce((total, item) => total + (item.offers[0]?.price ?? 0), 0);
+  const cartHasUnavailablePrice = cartItems.some((item) => !item.offers[0]?.price);
   const recommendationTitle = selected ? String(selected.name) : "the collection";
   const recommendations = useMemo(() => {
     const source = selected ?? results[0];
@@ -76,13 +80,14 @@ export default function Home() {
   const openFinder = () => { setFinderStep(0); setFinderAnswer(""); setFinderOpen(true); };
   const openCompare = () => setCompareOpen(true);
   const openBag = () => setCartOpen(true);
+  const openAccountPage = () => setLocation("/account");
 
   if (selected) return <FragranceDetail fragrance={selected} onBack={backToCollection} onWishlist={toggleWishlist} isWishlisted={wishlist.includes(selected.id)} />;
 
   return <div className="site-shell">
     <Search open={searchOpen} fragrances={fragrances} onClose={() => setSearchOpen(false)} onOpenProduct={openProduct} />
     <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} onSearch={() => setSearchOpen(true)} />
-    <Hero onSearch={() => setSearchOpen(true)} onMenu={() => setMenuOpen(true)} onAccount={() => setAccountOpen(true)} onBag={() => setCartOpen(true)} bagCount={cart.length} />
+    <Hero onSearch={() => setSearchOpen(true)} onMenu={() => setMenuOpen(true)} onAccount={openAccountPage} onBag={openBag} bagCount={cart.length} />
     <main id="collection" className="collection">
       <section className="collection-intro" data-reveal><div><div className="collection-kicker micro">01 / Fragrance discovery</div><h2 className="collection-title">Find<br />your scent</h2></div><div className="collection-deck"><p>A considered selection of exceptional fragrances, made easier to explore.</p><button type="button" className="text-button invert" onClick={openFinder}><Sparkles size={14} /> Find your trace</button></div></section>
       <div className="notice-bar" data-reveal><span>{DEVELOPMENT_DATA_NOTICE}</span><span>{wishlist.length} saved · {compare.length} comparing · {cart.length} in bag</span></div>
@@ -97,7 +102,7 @@ export default function Home() {
     <footer className="site-footer"><span>© 2026 Aurevia</span><span>Exceptional fragrances. Precisely chosen.</span><span>Real product data · transparent offers</span><span className="creator-credit">Created by ENG. Abdulhamid ALkatib</span></footer>
 
     {finderOpen && <div className="overlay-layer" role="dialog" aria-modal="true"><div className="modal-card finder-card"><button className="modal-close" type="button" onClick={() => setFinderOpen(false)} aria-label="Close"><X /></button><div className="micro">Fragrance finder · 0{finderStep + 1} / 03</div><h2>{finderSteps[finderStep]}</h2><p>{finderStep === 0 ? "What do you want your fragrance to feel like?" : finderStep === 1 ? "Choose the texture you are drawn to." : "How should it enter the room?"}</p><div className="finder-options">{(finderStep === 0 ? ["Quiet and luminous", "Warm and enveloping", "Fresh and kinetic"] : finderStep === 1 ? ["Silky woods", "Velvet florals", "Mineral freshness"] : ["Close to skin", "A confident trail", "A soft statement"]).map((option) => <button type="button" key={option} className={finderAnswer === option ? "finder-option active" : "finder-option"} onClick={() => setFinderAnswer(option)}>{option}<Check size={15} /></button>)}</div><button className="dark-button finder-next" disabled={!finderAnswer} type="button" onClick={() => { if (finderStep < 2) { setFinderStep((step) => step + 1); setFinderAnswer(""); } else { setFinderOpen(false); document.getElementById("collection")?.scrollIntoView({ behavior: "smooth" }); } }}>{finderStep < 2 ? "Continue" : "Show my edit"}<ArrowRight size={15} /></button></div></div>}
-    {cartOpen && <div className="overlay-layer" role="dialog" aria-modal="true"><div className="modal-card side-card"><button className="modal-close" type="button" onClick={() => setCartOpen(false)} aria-label="Close"><X /></button><div className="micro">Your bag · {cartItems.length}</div><h2>Saved for your next ritual.</h2>{cartItems.length ? <div className="drawer-list">{cartItems.map((item) => <div className="drawer-row" key={item.id}><img src={item.image} alt="" /><div><strong>{item.name}</strong><small>{item.brand} · {item.sizes[0]}</small></div><button type="button" onClick={() => setCart((items) => items.filter((id) => id !== item.id))}><X size={14} /></button></div>)}</div> : <p className="muted-copy">Your bag is waiting for a considered choice. Add a fragrance from the collection.</p>}<button className="dark-button full-button" type="button" onClick={() => setCartOpen(false)}>{cartItems.length ? "Continue to checkout" : "Explore the collection"}</button><p className="micro drawer-note">Checkout is ready for retailer and payment integration.</p></div></div>}
+    {cartOpen && <div className="overlay-layer cart-overlay" role="dialog" aria-modal="true"><div className="modal-card side-card cart-drawer"><button className="modal-close" type="button" onClick={() => setCartOpen(false)} aria-label="Close shopping bag"><X /></button><div className="micro">Your bag · {cartItems.length}</div><h2>Your next ritual.</h2>{cartItems.length ? <div className="drawer-list">{cartItems.map((item) => <div className="drawer-row" key={item.id}><img src={item.image} alt={`${item.brand} ${item.name}`} /><div><strong>{item.name}</strong><small>{item.brand} · {item.sizes[0]} · {item.offers[0]?.price ? `$${item.offers[0].price}` : "Price unavailable"}</small></div><button type="button" onClick={() => setCart((items) => items.filter((id) => id !== item.id))} aria-label={`Remove ${item.name} from bag`}><X size={14} /></button></div>)}</div> : <p className="muted-copy">Your bag is waiting for a considered choice. Add a fragrance from the collection.</p>}{cartItems.length > 0 && <div className="cart-total"><span>Total</span><strong>{cartTotal ? `$${cartTotal.toLocaleString("en-US")}` : "Price unavailable"}</strong>{cartHasUnavailablePrice && <small>Some selected prices are unavailable and are excluded from the total.</small>}</div>}<button className="dark-button full-button" type="button" onClick={() => setCartOpen(false)}>{cartItems.length ? "Continue to checkout" : "Explore the collection"}</button><p className="micro drawer-note">Prices update from the selected official offer snapshot.</p></div></div>}
     {compareOpen && <div className="overlay-layer" role="dialog" aria-modal="true"><div className="modal-card compare-card"><button className="modal-close" type="button" onClick={() => setCompareOpen(false)} aria-label="Close"><X /></button><div className="micro">Compare fragrances · {compareItems.length} / 3</div><h2>See the difference.</h2>{compareItems.length ? <div className="compare-table">{compareItems.map((item) => <article key={item.id}><img src={item.image} alt="" /><span className="micro">{item.brand}</span><h3>{item.name}</h3><p>{item.family}</p><div><small>Top</small><span>{item.notes.top.join(" · ")}</span></div><div><small>Base</small><span>{item.notes.base.join(" · ")}</span></div><button className="text-button" type="button" onClick={() => toggleCompare(item)}>Remove</button></article>)}</div> : <p className="muted-copy">Select up to three fragrances from the collection to compare their notes, family, and presence.</p>}</div></div>}
     {accountOpen && <div className="overlay-layer" role="dialog" aria-modal="true"><div className="modal-card side-card account-card"><button className="modal-close" type="button" onClick={() => setAccountOpen(false)} aria-label="Close"><X /></button><div className="micro">Aurevia account</div><h2>{account ? <>Your ritual,<br />remembered.</> : <>Keep your ritual,<br />across devices.</>}</h2><p className="muted-copy">{account ? `Signed in as ${account.name || account.email || "Aurevia member"}. Your wishlist is synced to this account.` : "Sign in to keep your wishlist available on every device. Your guest list will merge automatically after sign-in."}</p><div className="account-stats"><div><strong>{wishlist.length}</strong><span>Saved fragrances</span></div><div><strong>{compare.length}</strong><span>In comparison</span></div><div><strong>{cart.length}</strong><span>In your bag</span></div></div>{account ? <button className="dark-button full-button" type="button" onClick={() => setAccountOpen(false)}>Continue to my edit <ArrowRight size={15} /></button> : <button className="dark-button full-button" type="button" onClick={() => startLogin()}>Sign in & sync wishlist <ArrowRight size={15} /></button>}<p className="micro drawer-note">{account ? "Wishlist sync is active across your signed-in devices." : "Local guest storage remains available until you sign in."}</p></div></div>}
   </div>;
