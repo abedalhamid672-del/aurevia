@@ -3,6 +3,7 @@ export type Gender = "Women" | "Men" | "Unisex";
 export interface FragranceOffer {
   retailer: string;
   price: number | null;
+  priceType?: "fixed" | "from";
   currency: string;
   size: string;
   availability: "In stock" | "Out of stock" | "Unavailable";
@@ -59,14 +60,14 @@ export interface FragranceProvider {
 }
 
 export const DEVELOPMENT_DATA_NOTICE =
-  "Development dataset — six real fragrances. Prices, ratings, and retailer offers appear only when supplied by a licensed provider.";
+  "Curated catalog — 26 real fragrances with official or licensed product imagery. Prices are US snapshots and may change by size or retailer.";
 
 export const DEV_UPDATED_AT = "2026-09-19T10:00:00.000Z";
 export const DEV_SOURCE = "Aurevia development dataset — public brand metadata";
 
 export const GENDER_OPTIONS: Array<Gender | "All"> = ["All", "Women", "Men", "Unisex"];
-export const CONCENTRATION_OPTIONS = ["All", "Eau de Parfum", "Parfum"];
-export const FAMILY_OPTIONS = ["All", "Floral Aldehyde", "Woody Aromatic", "Woody", "Amber Floral", "Citrus Woody"];
+export const CONCENTRATION_OPTIONS = ["All", "Eau de Parfum", "Eau de Parfum Intense", "Eau de Toilette", "Eau de Toilette Intense", "Parfum"];
+export const FAMILY_OPTIONS = ["All", "Floral Aldehyde", "Woody Aromatic", "Woody", "Amber Floral", "Citrus Woody", "Amber Woody", "Amber Aromatic", "Woody Amber", "Woody Aquatic", "Amber Green", "Floral Amber", "Floral Woody"];
 export const ACCORD_OPTIONS = ["All", "Woody", "Floral", "Amber", "Citrus", "Fresh", "Musky", "Spicy", "Powdery"];
 export const AVAILABILITY_OPTIONS = ["All", "In stock", "Out of stock", "Price unavailable"];
 export const YEAR_OPTIONS = ["All", "1921", "2009", "2010", "2011", "2015", "2018"];
@@ -82,11 +83,12 @@ export const SORT_LABELS: Record<SortOption, string> = {
 
 export function formatPrice(offer?: FragranceOffer) {
   if (!offer || offer.price === null) return "Price unavailable";
-  return new Intl.NumberFormat("en-US", {
+  const value = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: offer.currency,
     maximumFractionDigits: 0,
   }).format(offer.price);
+  return offer.priceType === "from" ? `From ${value}` : value;
 }
 
 export function formatUpdatedAt(timestamp: string) {

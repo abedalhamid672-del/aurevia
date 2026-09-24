@@ -4,10 +4,12 @@ import { fragrances } from "../client/src/data/fragrances";
 import { getAllNotes, getAvailability, sortFragrances } from "../client/src/types/fragrance";
 
 describe("development fragrance provider", () => {
-  it("returns only the six real development records", async () => {
+  it("returns the complete real catalog", async () => {
     const records = await fragranceProvider.search("");
-    expect(records).toHaveLength(6);
-    expect(records.every((record) => record.dataStatus === "development")).toBe(true);
+    expect(records).toHaveLength(fragrances.length);
+    expect(records.some((record) => record.dataStatus === "development")).toBe(true);
+    expect(records.some((record) => record.dataStatus === "provider" && record.brand === "Louis Vuitton")).toBe(true);
+    expect(records.some((record) => record.dataStatus === "provider" && record.brand === "Jean Paul Gaultier")).toBe(true);
     expect(records.some((record) => record.name === "N°5 Eau de Parfum")).toBe(true);
   });
 
@@ -25,13 +27,14 @@ describe("development fragrance provider", () => {
     fragrances.forEach((record) => {
       expect(getAllNotes(record).length).toBeGreaterThan(0);
       expect(record.sizes.length).toBeGreaterThan(0);
-      expect(getAvailability(record)).toBe("Price unavailable");
+      expect(getAvailability(record)).toBe(record.offers.length ? "In stock" : "Price unavailable");
     });
   });
 
-  it("sorts newest records without inventing provider pricing", () => {
+  it("sorts newest records and keeps pricing provenance explicit", () => {
     const newest = sortFragrances(fragrances, "newest")[0];
-    expect(newest?.name).toBe("Sauvage Eau de Parfum");
-    expect(fragrances.every((record) => record.offers.length === 0)).toBe(true);
+    expect(newest?.name).toBe("Ambre Levant");
+    expect(fragrances.filter((record) => record.dataStatus === "development").every((record) => record.offers.length === 0)).toBe(true);
+    expect(fragrances.filter((record) => record.dataStatus === "provider").every((record) => record.offers.length > 0)).toBe(true);
   });
 });

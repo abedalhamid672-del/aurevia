@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Check, ChevronDown, GitCompare, Heart, ShoppingBag, Sparkles, X } from "lucide-react";
+import { startLogin } from "@/const";
+import { trpc } from "@/lib/trpc";
 import Hero from "@/components/Hero";
 import MobileMenu from "@/components/MobileMenu";
 import Search from "@/components/Search";
@@ -27,6 +29,11 @@ export default function Home() {
   const [filters, setFilters] = useState<FragranceFilters>(defaultFilters);
   const [sort, setSort] = useState<SortOption>("relevance");
   const [wishlist, setWishlist] = usePersistentIds("aurevia:wishlist:v1");
+  const { data: account } = trpc.auth.me.useQuery();
+  const syncWishlist = trpc.wishlist.sync.useMutation();
+  const addWishlist = trpc.wishlist.add.useMutation();
+  const removeWishlist = trpc.wishlist.remove.useMutation();
+  const syncedUserRef = useRef<number | null>(null);
   const [compare, setCompare] = useState<string[]>([]);
   const [cart, setCart] = usePersistentIds("aurevia:cart:v1");
   const [finderStep, setFinderStep] = useState(0);
@@ -43,13 +50,27 @@ export default function Home() {
   }, [selected, results]);
 
   useEffect(() => { document.body.style.overflow = menuOpen || searchOpen || finderOpen || cartOpen || compareOpen || accountOpen ? "hidden" : ""; return () => { document.body.style.overflow = ""; }; }, [menuOpen, searchOpen, finderOpen, cartOpen, compareOpen, accountOpen]);
+  useEffect(() => {
+    if (!account) { syncedUserRef.current = null; return; }
+    if (syncedUserRef.current === account.id || syncWishlist.isPending) return;
+    syncWishlist.mutate({ localIds: wishlist }, {
+      onSuccess: (merged) => { setWishlist(merged); syncedUserRef.current = account.id; },
+    });
+  }, [account, wishlist, syncWishlist, setWishlist]);
   useEffect(() => { const slug = window.location.pathname.startsWith("/fragrance/") ? window.location.pathname.replace("/fragrance/", "") : ""; if (slug) setSelected(fragrances.find((item) => item.slug === slug) ?? null); }, []);
   useEffect(() => { const elements = Array.from(document.querySelectorAll<HTMLElement>("[data-reveal]")); if (!elements.length || !("IntersectionObserver" in window)) { elements.forEach((element) => element.classList.add("is-visible")); return; } const observer = new IntersectionObserver((entries) => entries.forEach((entry) => { if (entry.isIntersecting) { entry.target.classList.add("is-visible"); observer.unobserve(entry.target); } }), { threshold: 0.12, rootMargin: "0px 0px -8% 0px" }); elements.forEach((element) => observer.observe(element)); return () => observer.disconnect(); }, [selected, compareOpen]);
 
   const openProduct = (fragrance: Fragrance) => { setSelected(fragrance); window.history.pushState({}, "", `/fragrance/${fragrance.slug}`); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const backToCollection = () => { setSelected(null); window.history.pushState({}, "", "/"); window.scrollTo({ top: document.getElementById("collection")?.offsetTop ?? 0, behavior: "smooth" }); };
   const resetFilters = () => { setFilters(defaultFilters); setQuery(""); setSort("relevance"); };
-  const toggleWishlist = (item: Fragrance) => setWishlist((items) => items.includes(item.id) ? items.filter((id) => id !== item.id) : [...items, item.id]);
+  const toggleWishlist = (item: Fragrance) => {
+    const saved = wishlist.includes(item.id);
+    setWishlist((items) => saved ? items.filter((id) => id !== item.id) : [...items, item.id]);
+    if (account) {
+      const mutation = saved ? removeWishlist : addWishlist;
+      mutation.mutate({ fragranceId: item.id }, { onSuccess: (next) => setWishlist(next) });
+    }
+  };
   const toggleCompare = (item: Fragrance) => setCompare((items) => items.includes(item.id) ? items.filter((id) => id !== item.id) : items.length >= 3 ? items : [...items, item.id]);
   const addToCart = (item: Fragrance) => { setCart((items) => items.includes(item.id) ? items : [...items, item.id]); setCartOpen(true); };
   const openFinder = () => { setFinderStep(0); setFinderAnswer(""); setFinderOpen(true); };
@@ -76,6 +97,6 @@ export default function Home() {
     {finderOpen && <div className="overlay-layer" role="dialog" aria-modal="true"><div className="modal-card finder-card"><button className="modal-close" type="button" onClick={() => setFinderOpen(false)} aria-label="Close"><X /></button><div className="micro">Fragrance finder · 0{finderStep + 1} / 03</div><h2>{finderSteps[finderStep]}</h2><p>{finderStep === 0 ? "What do you want your fragrance to feel like?" : finderStep === 1 ? "Choose the texture you are drawn to." : "How should it enter the room?"}</p><div className="finder-options">{(finderStep === 0 ? ["Quiet and luminous", "Warm and enveloping", "Fresh and kinetic"] : finderStep === 1 ? ["Silky woods", "Velvet florals", "Mineral freshness"] : ["Close to skin", "A confident trail", "A soft statement"]).map((option) => <button type="button" key={option} className={finderAnswer === option ? "finder-option active" : "finder-option"} onClick={() => setFinderAnswer(option)}>{option}<Check size={15} /></button>)}</div><button className="dark-button finder-next" disabled={!finderAnswer} type="button" onClick={() => { if (finderStep < 2) { setFinderStep((step) => step + 1); setFinderAnswer(""); } else { setFinderOpen(false); document.getElementById("collection")?.scrollIntoView({ behavior: "smooth" }); } }}>{finderStep < 2 ? "Continue" : "Show my edit"}<ArrowRight size={15} /></button></div></div>}
     {cartOpen && <div className="overlay-layer" role="dialog" aria-modal="true"><div className="modal-card side-card"><button className="modal-close" type="button" onClick={() => setCartOpen(false)} aria-label="Close"><X /></button><div className="micro">Your bag · {cartItems.length}</div><h2>Saved for your next ritual.</h2>{cartItems.length ? <div className="drawer-list">{cartItems.map((item) => <div className="drawer-row" key={item.id}><img src={item.image} alt="" /><div><strong>{item.name}</strong><small>{item.brand} · {item.sizes[0]}</small></div><button type="button" onClick={() => setCart((items) => items.filter((id) => id !== item.id))}><X size={14} /></button></div>)}</div> : <p className="muted-copy">Your bag is waiting for a considered choice. Add a fragrance from the collection.</p>}<button className="dark-button full-button" type="button" onClick={() => setCartOpen(false)}>{cartItems.length ? "Continue to checkout" : "Explore the collection"}</button><p className="micro drawer-note">Checkout is ready for retailer and payment integration.</p></div></div>}
     {compareOpen && <div className="overlay-layer" role="dialog" aria-modal="true"><div className="modal-card compare-card"><button className="modal-close" type="button" onClick={() => setCompareOpen(false)} aria-label="Close"><X /></button><div className="micro">Compare fragrances · {compareItems.length} / 3</div><h2>See the difference.</h2>{compareItems.length ? <div className="compare-table">{compareItems.map((item) => <article key={item.id}><img src={item.image} alt="" /><span className="micro">{item.brand}</span><h3>{item.name}</h3><p>{item.family}</p><div><small>Top</small><span>{item.notes.top.join(" · ")}</span></div><div><small>Base</small><span>{item.notes.base.join(" · ")}</span></div><button className="text-button" type="button" onClick={() => toggleCompare(item)}>Remove</button></article>)}</div> : <p className="muted-copy">Select up to three fragrances from the collection to compare their notes, family, and presence.</p>}</div></div>}
-    {accountOpen && <div className="overlay-layer" role="dialog" aria-modal="true"><div className="modal-card side-card account-card"><button className="modal-close" type="button" onClick={() => setAccountOpen(false)} aria-label="Close"><X /></button><div className="micro">Aurevia account</div><h2>Your ritual,<br />remembered.</h2><p className="muted-copy">Save a personal edit, keep your wishlist close, and return to the scents that feel like you.</p><div className="account-stats"><div><strong>{wishlist.length}</strong><span>Saved fragrances</span></div><div><strong>{compare.length}</strong><span>In comparison</span></div><div><strong>{cart.length}</strong><span>In your bag</span></div></div><button className="dark-button full-button" type="button" onClick={() => setAccountOpen(false)}>Continue as guest <ArrowRight size={15} /></button><p className="micro drawer-note">Sign-in integration can be connected when the commerce provider is enabled.</p></div></div>}
+    {accountOpen && <div className="overlay-layer" role="dialog" aria-modal="true"><div className="modal-card side-card account-card"><button className="modal-close" type="button" onClick={() => setAccountOpen(false)} aria-label="Close"><X /></button><div className="micro">Aurevia account</div><h2>{account ? <>Your ritual,<br />remembered.</> : <>Keep your ritual,<br />across devices.</>}</h2><p className="muted-copy">{account ? `Signed in as ${account.name || account.email || "Aurevia member"}. Your wishlist is synced to this account.` : "Sign in to keep your wishlist available on every device. Your guest list will merge automatically after sign-in."}</p><div className="account-stats"><div><strong>{wishlist.length}</strong><span>Saved fragrances</span></div><div><strong>{compare.length}</strong><span>In comparison</span></div><div><strong>{cart.length}</strong><span>In your bag</span></div></div>{account ? <button className="dark-button full-button" type="button" onClick={() => setAccountOpen(false)}>Continue to my edit <ArrowRight size={15} /></button> : <button className="dark-button full-button" type="button" onClick={() => startLogin()}>Sign in & sync wishlist <ArrowRight size={15} /></button>}<p className="micro drawer-note">{account ? "Wishlist sync is active across your signed-in devices." : "Local guest storage remains available until you sign in."}</p></div></div>}
   </div>;
 }

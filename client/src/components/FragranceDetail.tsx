@@ -1,5 +1,5 @@
 import { ArrowLeft, Heart } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Fragrance } from "@/types/fragrance";
 import { getAvailability, getDisplayPrice, getDisplayRating, getDisplaySize, getDisplayUpdatedLabel } from "@/types/fragrance";
 import NotePyramid from "@/components/NotePyramid";
@@ -10,6 +10,7 @@ interface FragranceDetailProps { fragrance: Fragrance; onBack: () => void; onWis
 export default function FragranceDetail({ fragrance, onBack, onWishlist, isWishlisted = false }: FragranceDetailProps) {
   const [saved, setSaved] = useState(isWishlisted);
   const [image, setImage] = useState(fragrance.image);
+  useEffect(() => setSaved(isWishlisted), [isWishlisted]);
   const wishlist = () => { setSaved((value) => !value); onWishlist?.(fragrance); };
   return <main className="detail-page">
     <header className="detail-header"><button type="button" className="text-button invert" onClick={onBack}><ArrowLeft size={14} /> Back to collection</button><span className="brand-mark">Aurevia</span><span className="micro">{fragrance.dataStatus === "development" ? "Development data" : "Provider data"}</span></header>
