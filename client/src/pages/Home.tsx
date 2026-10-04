@@ -14,11 +14,14 @@ import { fragrances } from "@/data/fragrances";
 import type { Fragrance, FragranceFilters, SortOption } from "@/types/fragrance";
 import { DEVELOPMENT_DATA_NOTICE, SORT_LABELS, sortFragrances, matchesFilters, getAllNotes, getAvailability } from "@/types/fragrance";
 import { usePersistentIds } from "@/lib/persistence";
+import { useLocale } from "@/lib/i18n";
+import { localizedAccountPath, localizedFragrancePath } from "@shared/seo";
 
 const defaultFilters: FragranceFilters = { brand: "All", gender: "All", concentration: "All", family: "All", note: "All", accord: "All", availability: "All", year: "All" };
 const finderSteps = ["Mood", "Texture", "Presence"];
 
 export default function Home() {
+  const { locale, copy } = useLocale();
   const [, setLocation] = useLocation();
   const [selected, setSelected] = useState<Fragrance | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -61,11 +64,11 @@ export default function Home() {
       onSuccess: (merged) => { setWishlist(merged); syncedUserRef.current = account.id; },
     });
   }, [account, wishlist, syncWishlist, setWishlist]);
-  useEffect(() => { const slug = window.location.pathname.startsWith("/fragrance/") ? window.location.pathname.replace("/fragrance/", "") : ""; if (slug) setSelected(fragrances.find((item) => item.slug === slug) ?? null); }, []);
+  useEffect(() => { const slug = window.location.pathname.startsWith("/fragrance/") ? window.location.pathname.replace("/fragrance/", "") : window.location.pathname.startsWith("/ar/عطر/") ? window.location.pathname.replace("/ar/عطر/", "") : ""; if (slug) setSelected(fragrances.find((item) => item.slug === slug) ?? null); }, []);
   useEffect(() => { const elements = Array.from(document.querySelectorAll<HTMLElement>("[data-reveal]")); if (!elements.length || !("IntersectionObserver" in window)) { elements.forEach((element) => element.classList.add("is-visible")); return; } const observer = new IntersectionObserver((entries) => entries.forEach((entry) => { if (entry.isIntersecting) { entry.target.classList.add("is-visible"); observer.unobserve(entry.target); } }), { threshold: 0.12, rootMargin: "0px 0px -8% 0px" }); elements.forEach((element) => observer.observe(element)); return () => observer.disconnect(); }, [selected, compareOpen]);
 
-  const openProduct = (fragrance: Fragrance) => { setSelected(fragrance); window.history.pushState({}, "", `/fragrance/${fragrance.slug}`); window.scrollTo({ top: 0, behavior: "smooth" }); };
-  const backToCollection = () => { setSelected(null); window.history.pushState({}, "", "/"); window.scrollTo({ top: document.getElementById("collection")?.offsetTop ?? 0, behavior: "smooth" }); };
+  const openProduct = (fragrance: Fragrance) => { setSelected(fragrance); window.history.pushState({}, "", localizedFragrancePath(locale, fragrance.slug)); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const backToCollection = () => { setSelected(null); window.history.pushState({}, "", locale === "ar" ? "/ar" : "/"); window.scrollTo({ top: document.getElementById("collection")?.offsetTop ?? 0, behavior: "smooth" }); };
   const resetFilters = () => { setFilters(defaultFilters); setQuery(""); setSort("relevance"); };
   const toggleWishlist = (item: Fragrance) => {
     const saved = wishlist.includes(item.id);
@@ -80,7 +83,7 @@ export default function Home() {
   const openFinder = () => { setFinderStep(0); setFinderAnswer(""); setFinderOpen(true); };
   const openCompare = () => setCompareOpen(true);
   const openBag = () => setCartOpen(true);
-  const openAccountPage = () => setLocation("/account");
+  const openAccountPage = () => setLocation(localizedAccountPath(locale));
 
   if (selected) return <FragranceDetail fragrance={selected} onBack={backToCollection} onWishlist={toggleWishlist} isWishlisted={wishlist.includes(selected.id)} />;
 
@@ -89,7 +92,8 @@ export default function Home() {
     <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} onSearch={() => setSearchOpen(true)} />
     <Hero onSearch={() => setSearchOpen(true)} onMenu={() => setMenuOpen(true)} onAccount={openAccountPage} onBag={openBag} bagCount={cart.length} />
     <main id="collection" className="collection">
-      <section className="collection-intro" data-reveal><div><div className="collection-kicker micro">01 / Fragrance discovery</div><h2 className="collection-title">Find<br />your scent</h2></div><div className="collection-deck"><p>A considered selection of exceptional fragrances, made easier to explore.</p><button type="button" className="text-button invert" onClick={openFinder}><Sparkles size={14} /> Find your trace</button></div></section>
+      <section className="collection-intro" data-reveal><div><div className="collection-kicker micro">01 / {locale === "ar" ? "اكتشاف العطر" : "Fragrance discovery"}</div><h2 className="collection-title">{locale === "ar" ? <>اكتشف<br />عطرك</> : <>Find<br />your scent</>}</h2></div><div className="collection-deck"><p>{locale === "ar" ? "مجموعة مختارة من العطور الاستثنائية، أصبحت أسهل للاستكشاف." : "A considered selection of exceptional fragrances, made easier to explore."}</p><button type="button" className="text-button invert" onClick={openFinder}><Sparkles size={14} /> {locale === "ar" ? "اعثر على أثرك" : "Find your trace"}</button></div></section>
+      <section className="seo-answer" data-reveal aria-labelledby="aurevia-answer-heading"><div className="micro">Aurevia / {locale === "ar" ? "إجابة مباشرة" : "Direct answer"}</div><h2 id="aurevia-answer-heading">{copy.answerTitle}</h2><p>{copy.answer}</p><p className="muted-copy">{copy.answerLimit}</p></section>
       <div className="notice-bar" data-reveal><span>{DEVELOPMENT_DATA_NOTICE}</span><span>{wishlist.length} saved · {compare.length} comparing · {cart.length} in bag</span></div>
       <section className="discovery-tools" data-reveal><div><div className="micro">Smart discovery</div><h3>Start with a feeling.</h3><p>Use the finder, then refine the edit by note, family, or presence.</p></div><div className="discovery-actions"><button className="dark-button" type="button" onClick={openFinder}><Sparkles size={15} /> Open fragrance finder</button><button className="outline-button" type="button" onClick={openCompare} aria-label={`Open fragrance comparison${compare.length ? ` with ${compare.length} selected` : ""}`}><GitCompare size={15} /> Compare {compare.length ? `(${compare.length})` : "fragrances"}</button><button className="outline-button" type="button" onClick={openBag} aria-label={`Open shopping bag${cart.length ? ` with ${cart.length} item${cart.length === 1 ? "" : "s"}` : ""}`}><ShoppingBag size={15} /> Bag {cart.length ? `(${cart.length})` : ""}</button></div></section>
       <Filters filters={filters} brands={brands} onChange={setFilters} onReset={resetFilters} />

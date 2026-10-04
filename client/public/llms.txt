@@ -1,0 +1,30 @@
+# Aurevia
+
+> A curated fragrance discovery and commerce experience built around real product data.
+
+## Public catalog
+
+- Homepage: https://aureviafragr-yuhvuls8.manus.space
+- Arabic homepage: https://aureviafragr-yuhvuls8.manus.space/ar
+- Fragrance catalog: https://aureviafragr-yuhvuls8.manus.space/#collection
+
+## Selected product pages
+
+- Aurevia fragrance: https://aureviafragr-yuhvuls8.manus.space/fragrance/chanel-no-5-eau-de-parfum
+- Aurevia fragrance: https://aureviafragr-yuhvuls8.manus.space/fragrance/dior-sauvage-eau-de-parfum
+- Aurevia fragrance: https://aureviafragr-yuhvuls8.manus.space/fragrance/le-labo-santal-33
+- Aurevia fragrance: https://aureviafragr-yuhvuls8.manus.space/fragrance/maison-francis-kurkdjian-baccarat-rouge-540
+- Aurevia fragrance: https://aureviafragr-yuhvuls8.manus.space/fragrance/byredo-bal-dafrique
+- Aurevia fragrance: https://aureviafragr-yuhvuls8.manus.space/fragrance/creed-aventus
+- Aurevia fragrance: https://aureviafragr-yuhvuls8.manus.space/fragrance/louis-vuitton-afternoon-swim
+- Aurevia fragrance: https://aureviafragr-yuhvuls8.manus.space/fragrance/louis-vuitton-california-dream
+- Aurevia fragrance: https://aureviafragr-yuhvuls8.manus.space/fragrance/louis-vuitton-attrape-reves
+- Aurevia fragrance: https://aureviafragr-yuhvuls8.manus.space/fragrance/louis-vuitton-imagination
+- Aurevia fragrance: https://aureviafragr-yuhvuls8.manus.space/fragrance/louis-vuitton-limmensite
+- Aurevia fragrance: https://aureviafragr-yuhvuls8.manus.space/fragrance/louis-vuitton-on-the-beach
+
+## Data policy
+
+Prices are time-stamped US offer snapshots when available. Missing prices are not estimated. Product facts and retailer links should be checked against the cited source URL on each product record.
+
+This file is a curated navigation layer; it does not replace robots.txt, sitemap.xml, structured data, or the public pages themselves.

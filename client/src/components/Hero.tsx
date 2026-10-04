@@ -1,6 +1,7 @@
 import { ArrowDown } from "lucide-react";
 import { useVideoScrub } from "@/hooks/useVideoScrub";
 import Navbar from "@/components/Navbar";
+import { useLocale } from "@/lib/i18n";
 
 const VIDEO_SRC = "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260821_114821_a8ca298f-be2c-4613-a4dd-51b69e16bbde.mp4";
 const VIDEO_WEBM_SRC = "/manus-storage/aurevia-hero-forward-1080-seek_7c9711cf.webm";
@@ -9,11 +10,12 @@ const VIDEO_REVERSE_WEBM_SRC = "/manus-storage/aurevia-hero-reverse-1080-seek_52
 interface HeroProps { onSearch: () => void; onMenu: () => void; bagCount: number; onAccount?: () => void; onBag?: () => void; }
 
 export default function Hero({ onSearch, onMenu, bagCount, onAccount, onBag }: HeroProps) {
+  const { copy, locale } = useLocale();
   const { videoRef, reverseVideoRef, canvasRef, progress, canvasLive } = useVideoScrub(VIDEO_SRC, VIDEO_REVERSE_WEBM_SRC);
   const scrollToCollection = () => document.getElementById("collection")?.scrollIntoView({ behavior: "smooth" });
 
   return (
-    <section className="hero-scroll" aria-label="Aurevia cinematic introduction">
+    <section className="hero-scroll" aria-label={locale === "ar" ? "المقدمة السينمائية لأوريفيا" : "Aurevia cinematic introduction"}>
       <div className="hero-sticky">
         <video ref={videoRef} className="hero-media" muted playsInline preload="auto" aria-hidden="true">
           <source src={VIDEO_WEBM_SRC} type="video/webm" />
@@ -26,12 +28,12 @@ export default function Hero({ onSearch, onMenu, bagCount, onAccount, onBag }: H
         <div className="hero-shade" />
         <Navbar onSearch={onSearch} onMenu={onMenu} bagCount={bagCount} onAccount={onAccount} onBag={onBag} />
         <div className="hero-content">
-          <div className="eyebrow">Curated fragrance collection</div>
-          <h1 className="hero-title">The art<br />of scent</h1>
-          <p className="hero-subtitle">Exceptional fragrances.<br />Precisely chosen.</p>
+          <div className="eyebrow">{copy.heroEyebrow}</div>
+          <h1 className="hero-title">{locale === "ar" ? <>فنّ<br />العطر</> : <>The art<br />of scent</>}</h1>
+          <p className="hero-subtitle">{locale === "ar" ? <>عطور استثنائية.<br />مختارة بدقة.</> : <>Exceptional fragrances.<br />Precisely chosen.</>}</p>
           <div className="hero-actions">
-            <button type="button" className="text-button" onClick={scrollToCollection}>Explore collection</button>
-            <a className="text-button" href="#discover">Discover your scent</a>
+            <button type="button" className="text-button" onClick={scrollToCollection}>{copy.explore}</button>
+            <a className="text-button" href="#discover">{copy.discover}</a>
           </div>
         </div>
         <div className="hero-progress" aria-label="Cinematic scroll progress"><span style={{ transform: `scaleX(${progress})` }} /></div>

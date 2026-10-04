@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /account
+Disallow: /ar/account
+Disallow: /api/oauth/
+Disallow: /__manus__/
+
+# AI crawler policy follows the same public-crawl rules as general search crawlers.
+# Allowing access does not guarantee retrieval, training, ranking, mention, or citation.
+Sitemap: https://aureviafragr-yuhvuls8.manus.space/sitemap.xml
