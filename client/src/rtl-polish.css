@@ -1,0 +1,66 @@
+/* Arabic reading rhythm and RTL polish. Kept separate so the visual system remains auditable. */
+html[dir="rtl"] body {
+  font-family: "IBM Plex Sans Arabic", Tahoma, Arial, sans-serif;
+  letter-spacing: 0;
+}
+html[dir="rtl"] .hero-title,
+html[dir="rtl"] .collection-title,
+html[dir="rtl"] .editorial-title,
+html[dir="rtl"] .account-hero h1,
+html[dir="rtl"] .detail-title,
+html[dir="rtl"] .smart-search-heading h2,
+html[dir="rtl"] .modal-card h2,
+html[dir="rtl"] .collection-deck,
+html[dir="rtl"] .editorial-copy,
+html[dir="rtl"] .account-intro {
+  font-family: "Noto Serif Arabic", "Times New Roman", serif;
+  letter-spacing: -.025em;
+}
+html[dir="rtl"] .micro,
+html[dir="rtl"] .nav-link,
+html[dir="rtl"] .brand-mark,
+html[dir="rtl"] .filter-label,
+html[dir="rtl"] .section-index,
+html[dir="rtl"] .source-label,
+html[dir="rtl"] .card-status,
+html[dir="rtl"] .card-price,
+html[dir="rtl"] .offer-heading,
+html[dir="rtl"] .text-button,
+html[dir="rtl"] .dark-button,
+html[dir="rtl"] .outline-button {
+  letter-spacing: .025em;
+  text-transform: none;
+}
+html[dir="rtl"] .hero-content { left: auto; right: 8vw; text-align: right; }
+html[dir="rtl"] .hero-actions,
+html[dir="rtl"] .detail-actions,
+html[dir="rtl"] .discovery-actions { justify-content: flex-start; }
+html[dir="rtl"] .hero-progress { right: auto; left: 34px; }
+html[dir="rtl"] .hero-scroll-hint { right: auto; left: 34px; }
+html[dir="rtl"] .hero-progress span { transform-origin: right; }
+html[dir="rtl"] .collection-deck,
+html[dir="rtl"] .editorial-copy,
+html[dir="rtl"] .brand-directory p,
+html[dir="rtl"] .account-intro,
+html[dir="rtl"] .muted-copy { text-align: right; }
+html[dir="rtl"] .notice-bar span:last-child { text-align: left; }
+html[dir="rtl"] .filter-control { padding-right: 28px; padding-left: 0; }
+html[dir="rtl"] .search-result,
+html[dir="rtl"] .recommendation-item,
+html[dir="rtl"] .drawer-row { text-align: right; }
+html[dir="rtl"] .smart-result-arrow { margin-left: 0; margin-right: auto; transform: rotate(180deg); }
+html[dir="rtl"] .detail-visual { direction: rtl; }
+html[dir="rtl"] .detail-copy,
+html[dir="rtl"] .detail-data,
+html[dir="rtl"] .editorial,
+html[dir="rtl"] .education-layer,
+html[dir="rtl"] .brand-directory,
+html[dir="rtl"] .account-page { text-align: right; }
+html[dir="rtl"] .mobile-menu-links button { text-align: right; }
+html[dir="rtl"] .text-button:after { transform: translateY(-1px) rotate(180deg); }
+html[dir="rtl"] .text-button:hover:after { transform: translate(-4px, -4px) rotate(180deg); }
+@media (max-width: 700px) {
+  html[dir="rtl"] .hero-content { right: 22px; left: 22px; }
+  html[dir="rtl"] .hero-progress { left: 18px; }
+  html[dir="rtl"] .hero-scroll-hint { left: 22px; }
+}

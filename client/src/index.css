@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./rtl-polish.css";
 
 :root {
   --dark: #181818;

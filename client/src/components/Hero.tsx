@@ -30,14 +30,14 @@ export default function Hero({ onSearch, onMenu, bagCount, onAccount, onBag }: H
         <div className="hero-content">
           <div className="eyebrow">{copy.heroEyebrow}</div>
           <h1 className="hero-title">{locale === "ar" ? <>فنّ<br />العطر</> : <>The art<br />of scent</>}</h1>
-          <p className="hero-subtitle">{locale === "ar" ? <>عطور استثنائية.<br />مختارة بدقة.</> : <>Exceptional fragrances.<br />Precisely chosen.</>}</p>
+          <p className="hero-subtitle">{copy.heroSubtitle}</p>
           <div className="hero-actions">
             <button type="button" className="text-button" onClick={scrollToCollection}>{copy.explore}</button>
             <a className="text-button" href="#discover">{copy.discover}</a>
           </div>
         </div>
-        <div className="hero-progress" aria-label="Cinematic scroll progress"><span style={{ transform: `scaleX(${progress})` }} /></div>
-        <button type="button" className="hero-scroll-hint" onClick={scrollToCollection} aria-label="Scroll to collection"><ArrowDown size={17} strokeWidth={1} /></button>
+        <div className="hero-progress" aria-label={locale === "ar" ? "تقدم التمرير السينمائي" : "Cinematic scroll progress"}><span style={{ transform: `scaleX(${progress})` }} /></div>
+        <button type="button" className="hero-scroll-hint" onClick={scrollToCollection} aria-label={locale === "ar" ? "التمرير إلى المجموعة" : "Scroll to collection"}><ArrowDown size={17} strokeWidth={1} /></button>
       </div>
     </section>
   );

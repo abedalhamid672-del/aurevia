@@ -13,13 +13,13 @@ export function getInitialLocale(): Locale {
   } catch {
     // Storage is optional.
   }
-  return "en";
+  return window.navigator.language.toLowerCase().startsWith("ar") ? "ar" : "en";
 }
 
 export function useLocale() {
   const [locale, setLocale] = useState<Locale>(getInitialLocale);
   useEffect(() => {
-    const next = getLocaleFromPathname(window.location.pathname);
+    const next = getInitialLocale();
     setLocale(next);
     document.documentElement.lang = localeConfig[next].htmlLang;
     document.documentElement.dir = localeConfig[next].dir;
